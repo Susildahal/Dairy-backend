@@ -23,8 +23,7 @@ import milkrouter from "./routes/milk.js";
 import settingrouter from "./routes/sitesetting.js"
 
 
- const day=new Date().getFullYear();
- console.log(day)
+
 
 //middleware
 const app = express();
