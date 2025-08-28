@@ -11,16 +11,20 @@ import { BadRequestError, NotFoundError } from "../middleware/errorHandler.js";
 
 export const savemilk = async (req, resp, next) => {
     try {
-        const { userid, name, todaymilk, todaymoney, todayfit, monthid } = req.body;
+        const { userid, name, todaymilk, todaymoney, todayfit } = req.body;
 
         // Validate required fields
-        if (!userid || !name || !todaymilk || !todaymoney || !monthid || !monthid  || !todayfit) {
+        if (!userid || !name || !todaymilk || !todaymoney || !todayfit) {
             return resp.status(400).json({
                 success: false,
-                message: "Missing required fields: userid, name, todaymilk, todaymoney, monthid, todayfit"
+                message: "Missing required fields: userid, name, todaymilk, todaymoney, todayfit"
             });
         }
-
+  const monthids = await Month.findOne({ status: true });
+ const monthid =monthids._id
+  if(!monthid){
+    throw new BadRequestError ("Active month can not available")
+  }
         const milkAmount = parseFloat(todaymilk);
         const moneyAmount = parseFloat(todaymoney);
         const fitAmount = parseFloat(todayfit || 0);

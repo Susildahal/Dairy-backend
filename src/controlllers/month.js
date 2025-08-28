@@ -107,7 +107,8 @@ export const activateMonth = async (req, res, next) => {
 export const getActiveMonth = async (req, res, next) => {
   try {
     const activeMonth = await Month.findOne({ status: true });
-    
+  
+
     if (!activeMonth) {
       throw new NotFoundError('No active month found');
     }
