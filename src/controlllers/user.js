@@ -197,7 +197,7 @@ user
 };
 
 
-export const getbyid=  async(req,resp)=>{
+export const getbyid=  async(req,resp,next )=>{
     try {
         const {id} = req.params;
         const user = await User.findById(id).select('-password');
