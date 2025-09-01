@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 
  export const saveUser = async (req, res, next) => {
   try {
-      const { name, email, phone, password, role ,tagnumber ,status } = req.body;
+      const { name, email, phone, password, role ,tagnumber ,status  ,both } = req.body;
 
       const emailexist = await User.find({email});
       if(emailexist.length===1){
@@ -25,8 +25,8 @@ import bcrypt from "bcryptjs";
         password: hashedPassword,
         role,
         tagnumber,
-        status
-
+        status,
+        both
       });
       res.status(StatusCodes.CREATED).json({
         success: true,
@@ -165,8 +165,9 @@ export const islogin = async (req, res ,next) => {
 export const editUser = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const {name, email, phone, password, role ,tagnumber ,status} = req.body;
-       
+    
+        const {name, email, phone, password, role ,tagnumber ,status , both} = req.body;
+      
 
      const userExist = await User.find({ email });
 
@@ -180,7 +181,7 @@ export const editUser = async (req, res, next) => {
             throw new BadRequestError("Phone number already exists");
         }
 
-        const user = await User.findByIdAndUpdate(id, {name, email, phone, password, role ,tagnumber ,status}, { new: true });
+        const user = await User.findByIdAndUpdate(id, {name, email, phone, password, role ,tagnumber ,status ,both}, { new: true });
         if (!user) {
             throw new NotFoundError("User not found");
         }
@@ -188,8 +189,8 @@ export const editUser = async (req, res, next) => {
 
         res.status(StatusCodes.OK).json({
             success: true,
-            data: 
-user
+            message: "User updated successfully",
+            data: user
         });
     } catch (error) {
         next(error);
@@ -224,6 +225,27 @@ export const updatestatus = async( req,resp,next)=>{
         }
 
         user.status = !user.status;
+        await user.save();
+
+        resp.status(StatusCodes.OK).json({
+            success: true,
+            data: user
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const updateBothStatus = async( req,resp,next)=>{
+    try {
+        const id = req.params.id;
+
+        const user = await User.findById(id);
+        if (!user) {
+            throw new NotFoundError("User not found");
+        }
+
+        user.both = !user.both;
         await user.save();
 
         resp.status(StatusCodes.OK).json({

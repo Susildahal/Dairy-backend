@@ -40,7 +40,11 @@ const userSchima =new mongoose.Schema({
     status:{
         type:Boolean,
         default:true
-    }   
+    } ,
+    both :{
+        type:Boolean,
+        required:[true,'Both is required']
+    }  
 },{timestamps:true});
 
 const User = mongoose.model("User",userSchima);

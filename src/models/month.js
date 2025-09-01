@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const monthSchema = new mongoose.Schema({
     year: {
-        type: Number,
+        type: String,
         required: [true, 'Year is required'],
     },
     month: {

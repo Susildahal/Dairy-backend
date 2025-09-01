@@ -20,7 +20,12 @@ const dailyMilkSchema = new mongoose.Schema({
     todaymoney: {
         type: Number,
         required: [true, "today money is required"]
+    },
+    monthid:{
+        type: String,
+        required: [true, "month id is required"]
     }
+
 }, { timestamps: true })
 
 const Milk = mongoose.model("Milk", dailyMilkSchema);

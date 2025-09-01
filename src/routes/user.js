@@ -1,4 +1,4 @@
-import {saveUser ,loginUser ,getUser ,getme  ,deleteUser ,logoutUser ,islogin  ,editUser ,getbyid ,updatestatus }  from "../controlllers/user.js"
+import {saveUser ,loginUser ,getUser ,getme  ,deleteUser ,logoutUser ,islogin  ,editUser ,getbyid ,updatestatus ,updateBothStatus }  from "../controlllers/user.js"
 import express from "express"
 const userrouter = express.Router();
 import {authenticateUser} from "../middleware/auth.js"
@@ -14,5 +14,6 @@ userrouter.post("/user/islogin", authenticateUser, islogin);
 userrouter.put("/:id", authenticateUser, editUser);
 userrouter.get("/:id", authenticateUser, getbyid);
 userrouter.patch("/:id", authenticateUser, updatestatus);
+userrouter.patch("/both/:id", authenticateUser, updateBothStatus);
 
 export default userrouter;
