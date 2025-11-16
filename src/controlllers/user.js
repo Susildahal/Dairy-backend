@@ -16,6 +16,10 @@ import bcrypt from "bcryptjs";
       if(phonexist.length===1){ 
         throw new BadRequestError("Phone number already exists");
       }
+      const superadmin = await User.findOne({ role: 'superadmin' });
+      if (role === 'superadmin' && superadmin) {
+        throw new BadRequestError("A superadmin already exists you can not create more ok");
+      }
 
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await User.create({
@@ -59,9 +63,9 @@ export const loginUser = async (req, res, next) => {
         }
 
         const token = jwt.sign(
-            { userId: user._id, role: user.email },
+            { userId: user._id, email: user.email, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+            { expiresIn: '7d' } // Changed to 7 days to match env
         );
 
         res.cookie("token", token, {

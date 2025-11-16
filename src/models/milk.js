@@ -24,7 +24,14 @@ const dailyMilkSchema = new mongoose.Schema({
     monthid:{
         type: String,
         required: [true, "month id is required"]
-    }
+    },
+     session: { 
+    type: String, 
+    enum: ['morning', 'night'], 
+    default: 'morning',
+    required: true 
+  },
+
 
 }, { timestamps: true })
 

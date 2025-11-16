@@ -11,13 +11,7 @@ export const authenticateUser = async (req, res, next) => {
             token = req.cookies.token || req.cookies.jwt;
         }
         
-        // // Check for token in Authorization header (for Postman)
-        // const authHeader = req.headers.authorization;
-        // if (authHeader && authHeader.startsWith('Bearer ')) {
-        //     token = authHeader.split(' ')[1];
-        // }
-
-        // Check if token exists
+      
         if (!token) {
             throw new UnauthorizedError('Authentication required');
         }

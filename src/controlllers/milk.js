@@ -1,5 +1,4 @@
-import Usertotal from "../models/usertotal.js";
-import Admintotal from "../models/admintotal.js";
+
 import Milk from "../models/milk.js";
 import { StatusCodes } from "http-status-codes";
 import Month from "../models/month.js";
@@ -12,13 +11,13 @@ import User from "../models/user.js";
 
 export const savemilk = async (req, resp, next) => {
     try {
-        const { userid, name, todaymilk, todaymoney, todayfit } = req.body;
+        const { userid, name, todaymilk, todaymoney, todayfit , session } = req.body;
 
         // Validate required fields
-        if (!userid || !name || todaymilk === undefined || todaymoney === undefined || todayfit === undefined) {
+        if (!userid || !name || todaymilk === undefined || todaymoney === undefined || todayfit === undefined || !session) {
             return resp.status(400).json({
                 success: false,
-                message: "Missing required fields: userid, name, todaymilk, todaymoney, todayfit"
+                message: "Missing required fields: userid, name, todaymilk, todaymoney, todayfit, session"
             });
         }
 
@@ -36,21 +35,6 @@ export const savemilk = async (req, resp, next) => {
         }
 
         console.log('Found user:', user);
-
-        // Check if user has submitted within the last hour (3600000 milliseconds)
-        if (user && user.updatedAt) {
-            const now = Date.now();
-            const lastUpdate = new Date(user.updatedAt).getTime();
-            const timeDifference = now - lastUpdate;
-            
-            // 1 hour = 3600000 
-            if (timeDifference < 3) {
-                return resp.status(400).json({
-                    success: false,
-                    message: "You have already submitted milk data within the last hour"
-                });
-            }
-        }
 
         // Parse numeric values
         const milkAmount = parseFloat(todaymilk) || 0;
@@ -73,7 +57,8 @@ export const savemilk = async (req, resp, next) => {
                 name,
                 todaymilk: milkAmount,
                 todaymoney: moneyAmount,
-                todayfit: fitAmount
+                todayfit: fitAmount,
+                session: session
             }
         };
 
@@ -110,30 +95,18 @@ export const savemilk = async (req, resp, next) => {
 
         const monthid = activeMonth._id;
 
-        // Check if milk record exists for this user and month
-        const existingMilkRecord = await Milk.findOne({ 
-            userid: userid, 
-            monthid: monthid 
-        });
-
-        if (!existingMilkRecord) {
-            // Create new milk record
+    
             const newMilk = new Milk({
                 userid,
                 name,
                 todaymilk: milkAmount,
                 todaymoney: moneyAmount,
                 todayfit: fitAmount,
-                monthid: monthid
+                monthid: monthid,
+                session: session
             });
             await newMilk.save();
-        } else {
-            // Update existing milk record
-            existingMilkRecord.todaymilk += milkAmount;
-            existingMilkRecord.todaymoney += moneyAmount;
-            existingMilkRecord.todayfit += fitAmount;
-            await existingMilkRecord.save();
-        }
+        
 
         // Return success response
         return resp.status(200).json({
@@ -145,7 +118,8 @@ export const savemilk = async (req, resp, next) => {
                 todaymilk: milkAmount,
                 todaymoney: moneyAmount,
                 todayfit: fitAmount,
-                monthid
+                monthid,
+                session
             }
         });
 
@@ -156,96 +130,145 @@ export const savemilk = async (req, resp, next) => {
 }
 export const updatemilk = async (req, resp, next) => {
     const { id } = req.params;
-    const { todaymilk, todaymoney, todayfit, userid, name } = req.body;
-
-    if (!id) throw new BadRequestError("Milk entry ID is required");
-
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const { userid, name, todaymilk, todaymoney, todayfit, session } = req.body;
 
     try {
-        const existingMilk = await Milk.findById(id).session(session);
-        if (!existingMilk) throw new NotFoundError("Milk entry not found");
+        // Validate required fields
+        if (!userid || !name || todaymilk === undefined || todaymoney === undefined || todayfit === undefined || !session) {
+            return resp.status(400).json({
+                success: false,
+                message: "Missing required fields: userid, name, todaymilk, todaymoney, todayfit, session"
+            });
+        }
 
-        const monthids = await Month.findOne({ status: true }).session(session);
-        if (!monthids) throw new BadRequestError("Active month is not available");
-        const monthid = monthids._id;
+        // Find existing milk record
+        const existingMilk = await Milk.findById(id);
+        if (!existingMilk) {
+            return resp.status(404).json({
+                success: false,
+                message: "Milk data not found"
+            });
+        }
 
-        const oldMilkAmount = existingMilk.todaymilk;
-        const oldMoneyAmount = existingMilk.todaymoney;
- 
+        // Parse numeric values
+        const milkAmount = parseFloat(todaymilk) || 0;
+        const moneyAmount = parseFloat(todaymoney) || 0;
+        const fitAmount = parseFloat(todayfit) || 0;
 
-        const newMilkAmount = parseFloat(todaymilk);
-        const newMoneyAmount = parseFloat(todaymoney);
-        const newFitAmount = parseFloat(todayfit || 0);
+        if (milkAmount < 0 || moneyAmount < 0 || fitAmount < 0) {
+            return resp.status(400).json({
+                success: false,
+                message: "Milk, money, and fit values must be non-negative numbers"
+            });
+        }
 
-        /** ---- USER TOTAL ---- */
-        let userTotal = await Usertotal.findOne({ userid, monthid }).session(session);
-        if (!userTotal) {
-            // recreate if missing
-            userTotal = new Usertotal({
-                userid,
+        // Find user by userid or _id
+        let user = await User.findOne({ userid: userid });
+        if (!user && mongoose.Types.ObjectId.isValid(userid)) {
+            user = await User.findById(userid);
+        }
+
+        if (!user) {
+            return resp.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Update user's last entry
+        const lastUpdatePayload = {
+            lastUpdateAt: new Date(),
+            lastUpdateDisplay: new Date().toLocaleString(),
+            lastEntry: {
                 name,
-                totalMilk: newMilkAmount,
-                totalMoney: newMoneyAmount,
-                monthid
-            });
-        } else {
-            userTotal.totalMilk = Math.max(0, userTotal.totalMilk - oldMilkAmount + newMilkAmount);
-            userTotal.totalMoney = Math.max(0, userTotal.totalMoney - oldMoneyAmount + newMoneyAmount);
+                todaymilk: milkAmount,
+                todaymoney: moneyAmount,
+                todayfit: fitAmount,
+                session: session
+            }
+        };
+
+        let updatedUser = await User.findOneAndUpdate(
+            { userid: userid },
+            { $set: lastUpdatePayload },
+            { new: true }
+        );
+
+        if (!updatedUser && mongoose.Types.ObjectId.isValid(userid)) {
+            updatedUser = await User.findByIdAndUpdate(
+                userid,
+                { $set: lastUpdatePayload },
+                { new: true }
+            );
         }
-        await userTotal.save({ session });
 
-        /** ---- ADMIN TOTAL ---- */
-        let adminTotal = await Admintotal.findOne({ monthid }).session(session);
-        if (!adminTotal) {
-            adminTotal = new Admintotal({
-                monthid,
-                totalMilk: newMilkAmount,
-                totalMoney: newMoneyAmount
-            });
-        } else {
-            adminTotal.totalMilk = Math.max(0, adminTotal.totalMilk - oldMilkAmount + newMilkAmount);
-            adminTotal.totalMoney = Math.max(0, adminTotal.totalMoney - oldMoneyAmount + newMoneyAmount);
-        }
-        await adminTotal.save({ session });
+        // Update milk record
+        existingMilk.userid = userid;
+        existingMilk.name = name;
+        existingMilk.todaymilk = milkAmount;
+        existingMilk.todaymoney = moneyAmount;
+        existingMilk.todayfit = fitAmount;
+        existingMilk.session = session;
+        // Keep the same monthid
+        await existingMilk.save();
 
-        /** ---- UPDATE DAILY MILK ---- */
-        existingMilk.todaymilk = newMilkAmount;
-        existingMilk.todaymoney = newMoneyAmount;
-        existingMilk.todayfit = newFitAmount;
-        existingMilk.name = name || existingMilk.name;
-        existingMilk.updatedAt = new Date();
-        await existingMilk.save({ session });
-
-        await session.commitTransaction();
-        session.endSession();
-
-        resp.status(StatusCodes.OK).json({
+        return resp.status(200).json({
             success: true,
-            message: "Milk entry updated successfully",
-            data: { daily: existingMilk, userTotal, adminTotal }
+            message: "Milk data updated successfully",
+            data: existingMilk
         });
+
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        console.error("Error updating milk:", error);
+        console.error("Error updating milk data:", error);
         next(error);
     }
 };
 
 
-
-
 export const allmilk = async (req, resp) => {
+    const { session, monthid, userid, page, limit } = req.query;
+
     try {
-        const milkData = await Milk.find();
+        // Pagination setup
+        const pageNumber = parseInt(page) || 1;
+        const limitNumber = parseInt(limit) || 1;
+        const skip = (pageNumber - 1) * limitNumber;
+
+        // Build filter object
+        const filter = {};
+        if (session) filter.session = session;
+        if (monthid) filter.monthid = monthid;
+        if (userid) filter.userid = userid;
+
+        // Get total count for pagination metadata
+        const totalCount = await Milk.countDocuments(filter);
+        const totalPages = Math.ceil(totalCount / limitNumber);
+
+        // Get paginated data
+        const milkData = await Milk.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNumber);
+
+        // Pagination metadata
+        const pagination = {
+            currentPage: pageNumber,
+            totalPages: totalPages,
+            totalItems: totalCount,
+            itemsPerPage: limitNumber,
+            hasNextPage: pageNumber < totalPages,
+            hasPrevPage: pageNumber > 1,
+            nextPage: pageNumber < totalPages ? pageNumber + 1 : null,
+            prevPage: pageNumber > 1 ? pageNumber - 1 : null
+        };
+
         resp.status(200).json({
             success: true,
             count: milkData.length,
+            pagination: pagination,
             data: milkData
-
         });
+
     } catch (error) {
         console.error("Error getting all milk data:", error);
         resp.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -255,186 +278,3 @@ export const allmilk = async (req, resp) => {
     }
 }
 
-
-
-export const dailyuserhistory = async (req, resp) => {
-    try {
-        const authuser = req.user;
-        const userid = authuser._id.toString();
-        const dailyuser = await Milk.find({ userid });
-
-        resp.status(StatusCodes.OK).json({
-            success: true,
-            count: dailyuser.length,
-            data: dailyuser
-        });
-    } catch (error) {
-        console.error("Error getting daily user history:", error);
-        resp.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-            success: false,
-            message: "Server error"
-        });
-    }
-}
-
-// Get admin total for a specific month
-export const getAdminTotal = async (req, resp, next) => {
-    try {
-        const adminTotal = await Admintotal.find();
-
-        if (!adminTotal || adminTotal.length === 0) {
-            return resp.status(404).json({
-                success: false,
-                message: `No admin total found`
-            });
-        }
-
-        // Convert string monthids to ObjectIds and filter out invalid ones
-        const monthIds = adminTotal
-            .map(at => at.monthid)
-            .filter(id => mongoose.Types.ObjectId.isValid(id))
-            .map(id => new mongoose.Types.ObjectId(id));
-
-
-        const monthNames = await Month.find({ _id: { $in: monthIds } });
-
-        // Create a combined response with admin totals and their corresponding month names
-        const adminDataWithMonths = adminTotal.map(admin => {
-            const correspondingMonth = monthNames.find(month =>
-                month._id.toString() === admin.monthid
-            );
-
-            return {
-                _id: admin._id,
-                totalMilk: admin.totalMilk,
-                totalMoney: admin.totalMoney,
-                monthid: admin.monthid,
-                monthName: correspondingMonth ? correspondingMonth.fullMonthName || `${correspondingMonth.month} ${correspondingMonth.year}` : 'Unknown Month',
-                monthDetails: correspondingMonth || null,
-                createdAt: admin.createdAt,
-                updatedAt: admin.updatedAt
-            };
-        });
-
-        resp.status(200).json({
-            success: true,
-            count: adminTotal.length,
-            data: adminDataWithMonths
-        });
-    } catch (error) {
-        console.error("Error getting admin total:", error);
-        next(error);
-    }
-}
-
-
-export const getUserTotal = async (req, resp, next) => {
-    try {
-        const authuser = req.user;
-        const userid = authuser._id.toString();
-        if (!userid) {
-            throw new BadRequestError("user id is required");
-        }
-
-        const total = await Usertotal.find({ userid });
-        
-        if (!total || total.length === 0) {
-            return resp.status(404).json({
-                success: false,
-                message: `No user total found for user: ${userid}`
-            });
-        }
-
-        // Convert string monthids to ObjectIds and filter out invalid ones
-        const monthIds = total
-            .map(t => t.monthid)
-            .filter(id => mongoose.Types.ObjectId.isValid(id))
-            .map(id => new mongoose.Types.ObjectId(id));
-
-        console.log('Month IDs for user:', monthIds);
-
-        const months = await Month.find({ _id: { $in: monthIds } });
-        console.log('Found months for user:', months);
-
-        // Create a combined response with user totals and their corresponding month names
-        const userDataWithMonths = total.map(userTotal => {
-            const correspondingMonth = months.find(month => 
-                month._id.toString() === userTotal.monthid
-            );
-            
-            return {
-                _id: userTotal._id,
-                userid: userTotal.userid,
-                name: userTotal.name,
-                totalMilk: userTotal.totalMilk,
-                totalMoney: userTotal.totalMoney,
-                monthid: userTotal.monthid,
-                monthName: correspondingMonth ? correspondingMonth.fullMonthName || `${correspondingMonth.month} ${correspondingMonth.year}` : 'Unknown Month',
-                monthDetails: correspondingMonth || null,
-                createdAt: userTotal.createdAt,
-                updatedAt: userTotal.updatedAt
-            };
-        });
-
-        resp.json({ 
-            status: StatusCodes.OK, 
-            success: true,
-            data: userDataWithMonths, 
-            count: total.length 
-        });
-
-    } catch (error) {
-        next(error);
-    }
-}
-
-
-export const getTotalMonth = async (req, resp, next) => {
-    try {
-        const total = await Usertotal.find();
-        
-        if (!total || total.length === 0) {
-            throw new NotFoundError("No user total found");
-        }
-
-        // Convert string monthids to ObjectIds and filter out invalid ones
-        const monthIds = total
-            .map(t => t.monthid)
-            .filter(id => mongoose.Types.ObjectId.isValid(id))
-            .map(id => new mongoose.Types.ObjectId(id));
-
-     
-
-        const months = await Month.find({ _id: { $in: monthIds } });
-
-        // Create a combined response with user totals and their corresponding month names
-        const userDataWithMonths = total.map(userTotal => {
-            const correspondingMonth = months.find(month => 
-                month._id.toString() === userTotal.monthid
-            );
-            
-            return {
-                _id: userTotal._id,
-                userid: userTotal.userid,
-                name: userTotal.name,
-                totalMilk: userTotal.totalMilk,
-                totalMoney: userTotal.totalMoney,
-                monthid: userTotal.monthid,
-                monthName: correspondingMonth ? correspondingMonth.fullMonthName || `${correspondingMonth.month} ${correspondingMonth.year}` : 'Unknown Month',
-                monthDetails: correspondingMonth || null,
-                createdAt: userTotal.createdAt,
-                updatedAt: userTotal.updatedAt
-            };
-        });
-
-        resp.json({ 
-            status: StatusCodes.OK, 
-            success: true,
-            data: userDataWithMonths, 
-            count: total.length 
-        });
-
-    } catch (error) {
-        next(error);
-    }
-}

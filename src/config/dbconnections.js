@@ -16,10 +16,8 @@ let seedingComplete = false;
 
 const mongodbConnection = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('✅ MongoDB Connected Successfully to Local Database!');
     
     // Only seed once per application run
     if (!seedingComplete) {
@@ -31,7 +29,7 @@ const mongodbConnection = async () => {
     
     return mongoose.connection;
   } catch (error) {
-    console.error("Database connection error:", error);
+    console.error("❌ Database connection error:", error);
     throw error;
   }
 };
