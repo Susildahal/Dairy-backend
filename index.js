@@ -31,9 +31,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // CORS Configuration - supports multiple origins
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:5173' ,'https://dairyadmin.vercel.app/'];
+const allowedOrigins = ['http://localhost:5173' ,'https://dairyadmin.vercel.app/'];
 
 const corsOptions = {
     origin: function (origin, callback) {
