@@ -15,12 +15,12 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 const port = process.env.PORT || 5000;
 import bodyParser from "body-parser";
-import mongodbConnection from "./config/dbconnections.js";
-import { errorHandlerMiddleware } from "./middleware/errorHandler.js";
-import monthRouter from "./routes/month.js";
-import userRouter from "./routes/user.js";
-import milkrouter from "./routes/milk.js";
-import settingrouter from "./routes/sitesetting.js"
+import mongodbConnection from "./src/config/dbconnections.js";
+import { errorHandlerMiddleware } from "./src/middleware/errorHandler.js";
+import monthRouter from "./src/routes/month.js";
+import userRouter from "./src/routes/user.js";
+import milkrouter from "./src/routes/milk.js";
+import settingrouter from "./src/routes/sitesetting.js"
 
 //middleware
 const app = express();
@@ -29,10 +29,25 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// CORS Configuration - supports multiple origins
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:5173'];
+
 const corsOptions = {
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    credentials: true
+    credentials: true,
+    optionsSuccessStatus: 200
 }
 
 app.use(cors(corsOptions));
