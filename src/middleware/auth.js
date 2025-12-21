@@ -6,6 +6,7 @@ export const authenticateUser = async (req, res, next) => {
     try {
         let token;
         
+        
         // Check for token in cookies
         if (req.cookies && (req.cookies.token || req.cookies.jwt)) {
             token = req.cookies.token || req.cookies.jwt;
