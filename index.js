@@ -2,6 +2,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import path from "path";
+import axios from "axios";
 import { fileURLToPath } from "url";
 
 // Get current directory for ES modules
@@ -32,7 +33,7 @@ app.use(cookieParser());
 // CORS Configuration - supports multiple origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:5173'];
+  : ['http://localhost:5173' ,'https://dairyadmin.vercel.app/'];
 
 const corsOptions = {
     origin: function (origin, callback) {
@@ -57,6 +58,10 @@ app.get('/', (req, res) => {
     res.send('Server is running!');
 });
 
+app.get('/api/ping', (req, res) => {
+    res.send('Pong!');
+});
+
 // API routes
 app.use('/api/months', monthRouter);
 app.use('/api/users', userRouter);
@@ -65,6 +70,24 @@ app.use('/api/setting', settingrouter);
 
 // Error handler middleware - must be used after all routes
 app.use(errorHandlerMiddleware);
+
+ const api = async () =>{
+    try {
+        const response = await axios.get('https://dairy-backend-hwt2.onrender.com/api/ping');
+console.log(`Public IP Address: ${response.data}`);
+        
+    } catch (error) {
+        console.error('Error fetching public IP address:', error);
+    }
+
+}
+
+setTimeout(() => {  
+    api();
+}, 10 * 60 * 1000 ); // 10 minutes interval
+
+
+   
 
 // Start server
 mongodbConnection()
