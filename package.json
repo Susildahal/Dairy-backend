@@ -1,11 +1,10 @@
 {
   "name": "dairy-backend",
   "version": "1.0.0",
-  "main": "src/index.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node index.js",
     "ip": "node get-ip.js"
   },
   "keywords": [],
