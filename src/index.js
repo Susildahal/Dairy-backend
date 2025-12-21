@@ -34,7 +34,7 @@ app.use(cookieParser()); // Added cookie-parser middleware
 
 
 const corsOptions = {
-    origin: ["http://localhost:5173", "https://dairy-frontend-eight.vercel.app/"],
+    origin: ["http://localhost:5173", "https://dairy-frontend-ftte.vercel.app/" ,"https://dairyadmin.vercel.app/"],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true
 };
