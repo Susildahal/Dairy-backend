@@ -6,13 +6,19 @@ export const authenticateUser = async (req, res, next) => {
     try {
         let token;
         
-        
-        // Check for token in cookies
+        // Check for token in cookies first
         if (req.cookies && (req.cookies.token || req.cookies.jwt)) {
             token = req.cookies.token || req.cookies.jwt;
         }
         
-      
+        // Fallback: Check Authorization header for mobile browsers
+        if (!token && req.headers.authorization) {
+            const authHeader = req.headers.authorization;
+            if (authHeader.startsWith('Bearer ')) {
+                token = authHeader.substring(7);
+            }
+        }
+        
         if (!token) {
             throw new UnauthorizedError('Authentication required');
         }

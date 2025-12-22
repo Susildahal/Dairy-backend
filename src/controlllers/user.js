@@ -68,11 +68,23 @@ export const loginUser = async (req, res, next) => {
             { expiresIn: '7d' } // Changed to 7 days to match env
         );
 
+        // More mobile-friendly cookie settings
+        const isProduction = process.env.NODE_ENV === "production";
+        
         res.cookie("token", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days to match token expiry
+            secure: isProduction, // Always secure in production
+            sameSite: isProduction ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            domain: isProduction ? undefined : "localhost" // Explicit domain for development
+        });
+        
+        // Also set a non-httpOnly cookie for client-side access (fallback)
+        res.cookie("auth_status", "true", {
+            httpOnly: false,
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         // omit password from response
@@ -82,6 +94,34 @@ export const loginUser = async (req, res, next) => {
         res.status(StatusCodes.OK).json({
             success: true,
             data: userSafe
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const logoutUser = async (req, res, next) => {
+    try {
+        const isProduction = process.env.NODE_ENV === "production";
+        
+        // Clear all auth cookies
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            domain: isProduction ? undefined : "localhost"
+        });
+        
+        res.clearCookie("auth_status", {
+            httpOnly: false,
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            domain: isProduction ? undefined : "localhost"
+        });
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            message: "Logged out successfully"
         });
     } catch (error) {
         next(error);
@@ -143,21 +183,21 @@ export const deleteUser = async (req, res, next) => {
     }
 };
 
-export const logoutUser = async (req, res, next) => {
-    try {
-        res.clearCookie("token", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
-        });
-        res.status(StatusCodes.OK).json({
-            success: true,
-            message: "Logged out successfully"
-        });
-    } catch (error) {
-        next(error);
-    }
-};
+// export const logoutUser = async (req, res, next) => {
+//     try {
+//         res.clearCookie("token", {
+//             httpOnly: true,
+//             secure: process.env.NODE_ENV === "production",
+//             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+//         });
+//         res.status(StatusCodes.OK).json({
+//             success: true,
+//             message: "Logged out successfully"
+//         });
+//     } catch (error) {
+//         next(error);
+//     }
+// };
 
 export const islogin = async (req, res ,next) => {
     try {
