@@ -85,7 +85,11 @@ setTimeout(() => {
 }, 10 * 60 * 1000 ); // 10 minutes interval
 
 
-   
+api(); // Call immediately on startup
+
+setInterval(() => {  
+    api();
+}, 10 * 60 * 1000 ); // Call every 10 minutes
 
 // Start server
 mongodbConnection()
