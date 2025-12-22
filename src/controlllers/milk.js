@@ -278,3 +278,28 @@ export const allmilk = async (req, resp) => {
     }
 }
 
+
+
+export const delatemilk = async (req, resp) => {
+    const { id } = req.params;
+    try {
+        const deletedMilk = await Milk.findByIdAndDelete(id);
+        if (!deletedMilk) {
+            return resp.status(404).json({
+                success: false,
+                message: "Milk data not found"
+            });
+        }
+        resp.status(200).json({
+            success: true,
+            message: "Milk data deleted successfully"
+        });
+    }
+    catch (error) {
+        console.error("Error deleting milk data:", error);
+        resp.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+}
