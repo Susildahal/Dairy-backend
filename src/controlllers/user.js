@@ -70,7 +70,7 @@ export const loginUser = async (req, res, next) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,        // REQUIRED for SameSite=None
-      sameSite: "none",    // REQUIRED for cross-domain
+      sameSite: true,    // REQUIRED for cross-domain
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
