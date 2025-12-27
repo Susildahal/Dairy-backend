@@ -74,6 +74,8 @@ export const loginUser = async (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
+    res.json({message:"login successfully " ,auth_token:token})
+
     const userSafe = user.toObject();
     delete userSafe.password;
 
@@ -89,31 +91,31 @@ export const loginUser = async (req, res, next) => {
 
 
 export const logoutUser = async (req, res, next) => {
-    try {
-        const isProduction = process.env.NODE_ENV === "production";
-        
-        // Clear all auth cookies
-        res.clearCookie("token", {
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: none,
-            domain: isProduction ? undefined : "localhost"
-        });
-        
-        res.clearCookie("auth_status", {
-            httpOnly: false,
-            secure: isProduction,
-            sameSite: isProduction ? "none" : "lax",
-            domain: isProduction ? undefined : "localhost"
-        });
+  try {
+    const isProduction = process.env.NODE_ENV === "production";
 
-        res.status(StatusCodes.OK).json({
-            success: true,
-            message: "Logged out successfully"
-        });
-    } catch (error) {
-        next(error);
-    }
+    // Clear cookies exactly as they were set
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/", // always include path
+    });
+
+    res.clearCookie("auth_status", {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/",
+    });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 

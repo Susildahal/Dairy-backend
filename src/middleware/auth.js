@@ -6,7 +6,13 @@ import User from '../models/user.js';
 
 export const authenticateUser = async (req, res, next) => {
   try {
-    const token = req.cookies?.token;
+   const token =
+      req.cookies?.token ||
+      (req.headers.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization.split(" ")[1]
+        : null);
+
+        console.log(token)
 
     if (!token) {
       throw new UnauthorizedError("Authentication required");

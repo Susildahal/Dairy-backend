@@ -31,13 +31,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // CORS Configuration - supports multiple origins
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'https://dairyadmin.vercel.app' ,"https://dairyadmin.vercel.app" ," http://192.168.18.254:5173/"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://172.26.224.1:5173', 'https://dairyadmin.vercel.app' ,"https://dairyadmin.vercel.app" ," http://192.168.18.254:5173/", 'http://172.26.224.1:5173/'];
 
 const corsOptions = {
     origin: function (origin, callback) {
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
-        
+
         if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
             callback(null, true);
         } else {
@@ -69,35 +69,35 @@ app.use('/api/setting', settingrouter);
 // Error handler middleware - must be used after all routes
 app.use(errorHandlerMiddleware);
 
- const api = async () =>{
+const api = async () => {
     try {
         const response = await axios.get('https://dairy-backend-hwt2.onrender.com/api/ping');
-console.log(`Public IP Address: ${response.data}`);
-        
+        console.log(`Public IP Address: ${response.data}`);
+
     } catch (error) {
         console.error('Error fetching public IP address:', error);
     }
 
 }
 
-setTimeout(() => {  
+setTimeout(() => {
     api();
-}, 10 * 60 * 1000 ); // 10 minutes interval
+}, 10 * 60 * 1000); // 10 minutes interval
 
 
 api(); // Call immediately on startup
 
-setInterval(() => {  
+setInterval(() => {
     api();
-}, 10 * 60 * 1000 ); // Call every 10 minutes
+}, 10 * 60 * 1000); // Call every 10 minutes
 
 // Start server
 mongodbConnection()
-.then(() => {
-    app.listen(port, "0.0.0.0", () => {
-        console.log(`Server is running on port ${port}`);
+    .then(() => {
+        app.listen(port, "0.0.0.0", () => {
+            console.log(`Server is running on port ${port}`);
+        });
+    })
+    .catch((error) => {
+        console.error("Error starting server:", error);
     });
-})
-.catch((error) => {
-    console.error("Error starting server:", error);
-});
