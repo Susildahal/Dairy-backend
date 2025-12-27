@@ -44,61 +44,49 @@ import bcrypt from "bcryptjs";
 };
 
 export const loginUser = async (req, res, next) => {
-    try {
-        const { email, phone, password } = req.body;
+  try {
+    const { email, phone, password } = req.body;
 
-        if (!email && !phone) {
-            throw new BadRequestError("Please provide email or phone and password");
-        }
-
-        const query = email ? { email } : { phone };
-        const user = await User.findOne(query);
-        if (!user) {
-            throw new NotFoundError("User not found");
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            throw new BadRequestError("Invalid credentials");
-        }
-
-        const token = jwt.sign(
-            { userId: user._id, email: user.email, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' } // Changed to 7 days to match env
-        );
-
-        // More mobile-friendly cookie settings
-        const isProduction = process.env.NODE_ENV === "production";
-        
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: isProduction, // Always secure in production
-            sameSite: isProduction ? "none" : "lax",
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            domain: isProduction ? undefined : "localhost" // Explicit domain for development
-        });
-        
-        // Also set a non-httpOnly cookie for client-side access (fallback)
-        res.cookie("auth_status", "true", {
-            httpOnly: false,
-            secure: isProduction,
-            sameSite: isProduction ? "none" : "lax",
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-
-        // omit password from response
-        const userSafe = user.toObject ? user.toObject() : { ...user };
-        delete userSafe.password;
-
-        res.status(StatusCodes.OK).json({
-            success: true,
-            data: userSafe
-        });
-    } catch (error) {
-        next(error);
+    if (!password || (!email && !phone)) {
+      throw new BadRequestError("Please provide email or phone and password");
     }
+
+    const user = await User.findOne(email ? { email } : { phone });
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new BadRequestError("Invalid credentials");
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,        // REQUIRED for SameSite=None
+      sameSite: "none",    // REQUIRED for cross-domain
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    const userSafe = user.toObject();
+    delete userSafe.password;
+
+    res.status(200).json({
+      success: true,
+      data: userSafe
+    });
+
+  } catch (err) {
+    next(err);
+  }
 };
+
 
 export const logoutUser = async (req, res, next) => {
     try {
