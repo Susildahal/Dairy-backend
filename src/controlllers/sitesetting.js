@@ -5,6 +5,7 @@ import { StatusCodes } from "http-status-codes";
 
 
 
+
 export const saveSiteSettings = async (req, res, next) => {
   try {
     const { name, phone, email, rate_of_user, rate_of_admin } = req.body;

@@ -1,6 +1,7 @@
 import Month from "../models/month.js";
 import { BadRequestError, NotFoundError } from "../middleware/errorHandler.js";
 import { StatusCodes } from "http-status-codes";
+import Milk from "../models/milk.js";
 
 // Create a new month entry
 export const createMonth = async (req, res, next) => {
@@ -136,6 +137,10 @@ export const deleteMonth = async (req, res, next) => {
     if (month.status === true) {
       throw new BadRequestError('Cannot delete active month. Please activate another month first.');
     }
+     const ismothhavedata =  await Milk.findOne({monthid:id})
+     if(ismothhavedata){
+      throw new BadRequestError("You can not delte this month in this month you have a data exist")
+     }
     
     await Month.findByIdAndDelete(id);
     
