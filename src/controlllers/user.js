@@ -96,7 +96,7 @@ export const logoutUser = async (req, res, next) => {
         res.clearCookie("token", {
             httpOnly: true,
             secure: isProduction,
-            sameSite: isProduction ? "none" : "lax",
+            sameSite: none,
             domain: isProduction ? undefined : "localhost"
         });
         
