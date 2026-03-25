@@ -240,6 +240,34 @@ export const allmilk = async (req, resp) => {
         if (monthid) filter.monthid = monthid;
         if (userid) filter.userid = userid;
 
+        // Restriction: Admins should only see milk entries for their own users
+        if (req.user.role === 'admin') {
+            // Find all users created by this admin
+            const adminUsers = await User.find({ adminId: req.user.userId }).select('_id');
+            const adminUserIds = adminUsers.map(u => u._id.toString());
+            
+            // If the filter already has a userid, ensure it belongs to this admin
+            if (filter.userid) {
+                if (!adminUserIds.includes(filter.userid)) {
+                    // Requested user doesn't belong to this admin
+                    return resp.status(StatusCodes.OK).json({
+                        success: true,
+                        count: 0,
+                        pagination: {
+                            currentPage: pageNumber,
+                            totalPages: 0,
+                            totalItems: 0,
+                            itemsPerPage: limitNumber
+                        },
+                        data: []
+                    });
+                }
+            } else {
+                // No specific user requested, filter by all users of this admin
+                filter.userid = { $in: adminUserIds };
+            }
+        }
+
         // Get total count for pagination metadata
         const totalCount = await Milk.countDocuments(filter);
         const totalPages = Math.ceil(totalCount / limitNumber);

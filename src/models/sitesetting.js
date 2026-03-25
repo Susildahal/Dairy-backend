@@ -21,6 +21,12 @@ const settingsSchema = new mongoose.Schema({
     rate_of_admin: {
         type: Number,
         required: [true, 'Rate of admin is required']
+    },
+    adminId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        unique:true
     }
 }, { timestamps: true });
 

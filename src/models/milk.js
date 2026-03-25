@@ -31,9 +31,13 @@ const dailyMilkSchema = new mongoose.Schema({
     default: 'morning',
     required: true 
   },
+    date:{
+        type:String,
+        required:[true,"Date is required"]
+    }
 
 
-}, { timestamps: true })
+}, { timestamps: false })
 
 const Milk = mongoose.model("Milk", dailyMilkSchema);
 

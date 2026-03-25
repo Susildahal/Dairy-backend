@@ -1,12 +1,13 @@
-import {saveUser ,loginUser ,getUser ,getme  ,deleteUser ,logoutUser ,islogin  ,editUser ,getbyid ,updatestatus ,updateBothStatus }  from "../controlllers/user.js"
+import {saveUser ,loginUser ,getUser ,getme  ,deleteUser ,logoutUser ,islogin  ,editUser ,getbyid ,updatestatus ,updateBothStatus, getUsers }  from "../controlllers/user.js"
 import express from "express"
 const userrouter = express.Router();
 import {authenticateUser} from "../middleware/auth.js"
 
 
-userrouter.post("/register", saveUser);
+userrouter.post("/register",authenticateUser, saveUser);
 userrouter.post("/login", loginUser);
-userrouter.get("/user-all", getUser);
+userrouter.get("/user-all",authenticateUser, getUser);
+userrouter.get("/", authenticateUser, getUsers);
 userrouter.get("/me", authenticateUser, getme);
 userrouter.delete("/user/:id", authenticateUser, deleteUser);
 userrouter.post("/user/logout", authenticateUser, logoutUser);

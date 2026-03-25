@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 
@@ -28,6 +27,14 @@ const userSchima =new mongoose.Schema({
         required:[true,'Password is required'],
         minlength:[6,'Password must be at least 6 characters']
     },
+    adminId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'User'
+    },
+    createdBy:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'User'
+    },
     role:{
         type:String,
         enum:['user','admin'  ,'superadmin'],
@@ -35,8 +42,11 @@ const userSchima =new mongoose.Schema({
     },
     tagnumber:{
         type:String,
-        required:[true,'Tag number is required']
     } ,
+    maxUsers:{
+        type:Number,
+        default:0
+    },
     status:{
         type:Boolean,
         default:true

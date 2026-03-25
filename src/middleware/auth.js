@@ -26,6 +26,7 @@ export const authenticateUser = async (req, res, next) => {
     }
 
     req.user = user;
+    req.user.userId = decoded.userId; // Ensure userId is available for controllers
     next();
 
   } catch (error) {
@@ -39,6 +40,15 @@ export const authenticateUser = async (req, res, next) => {
   }
 };
 
+
+export const restrictTo = (...roles) => {
+    return (req, res, next) => {
+        if (!roles.includes(req.user.role)) {
+            return next(new UnauthorizedError('You do not have permission to perform this action'));
+        }
+        next();
+    };
+};
 
 // Middleware to require admin access
 export const requireAdmin = async (req, res, next) => {

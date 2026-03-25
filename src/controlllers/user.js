@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 
  export const saveUser = async (req, res, next) => {
   try {
-      const { name, email, phone, password, role ,tagnumber ,status  ,both } = req.body;
+      const { name, email, phone, password, role ,tagnumber ,status  ,both ,maxUsers } = req.body;
 
       const emailexist = await User.find({email});
       if(emailexist.length===1){
@@ -21,6 +21,24 @@ import bcrypt from "bcryptjs";
         throw new BadRequestError("A superadmin already exists you can not create more ok");
       }
 
+      if(req.user.role === 'admin'){
+        const admin = await User.findById(req.user.userId);
+        const userCount = await User.countDocuments({adminId:req.user.userId});
+        if(admin.maxUsers <= userCount){
+            throw new BadRequestError("User limit reached for this admin");
+        }
+      }
+
+      const createdBy = req.user.userId;
+      let userAdminId = null;
+      if (req.user.role === 'superadmin' && role === 'admin') {
+        // When SuperAdmin creates an Admin, they are their own admin identifier? 
+        // Or we leave it null for admins.
+        userAdminId = null; 
+      } else if (req.user.role === 'admin' && role === 'user') {
+        userAdminId = req.user.userId;
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await User.create({
         name,
@@ -29,8 +47,11 @@ import bcrypt from "bcryptjs";
         password: hashedPassword,
         role,
         tagnumber,
-        status,
-        both
+        maxUsers: maxUsers || 10,
+        status: status !== undefined ? status : true,
+        both: both !== undefined ? both : true,
+        createdBy,
+        adminId: userAdminId
       });
       res.status(StatusCodes.CREATED).json({
         success: true,
@@ -74,13 +95,17 @@ export const loginUser = async (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    res.json({message:"login successfully " ,auth_token:token})
-
-    const userSafe = user.toObject();
-    delete userSafe.password;
-
     res.status(200).json({
       success: true,
+      message: "login successfully",
+      auth_token: token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role
+      },
       data: userSafe
     });
 
@@ -121,7 +146,16 @@ export const logoutUser = async (req, res, next) => {
 
 export const getUser = async (req, res, next) => {
     try {
-        const user = await User.find().select('-password')  .select('-__v');
+        let filter = {};
+        
+        // If the requester is an admin, they can only see users they created/manage
+        if (req.user.role === 'admin') {
+            filter.adminId = req.user.userId;
+            filter.role = 'user'; // Admins should typically only see 'user' role
+        } 
+        // If superadmin, they can see everything unless they provide a specific filter
+        
+        const user = await User.find(filter).select('-password').select('-__v');
         if (!user) {
             throw new NotFoundError("User not found");
         }
@@ -130,7 +164,7 @@ export const getUser = async (req, res, next) => {
             success: true,
             data: {
                 user,
-                total:user.length
+                total: user.length
             }
         });
     } catch (error) {
@@ -140,9 +174,13 @@ export const getUser = async (req, res, next) => {
 
 export const getme = async (req, res, next) => {
     try {
+        const user = await User.findById(req.user.userId).select("-password");
+        if (!user) {
+            throw new NotFoundError("User not found");
+        }
         res.status(StatusCodes.OK).json({
             success: true,
-            data: req.user,
+            data: user,
             
         });
     } catch (error) {
@@ -173,21 +211,32 @@ export const deleteUser = async (req, res, next) => {
     }
 };
 
-// export const logoutUser = async (req, res, next) => {
-//     try {
-//         res.clearCookie("token", {
-//             httpOnly: true,
-//             secure: process.env.NODE_ENV === "production",
-//             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
-//         });
-//         res.status(StatusCodes.OK).json({
-//             success: true,
-//             message: "Logged out successfully"
-//         });
-//     } catch (error) {
-//         next(error);
-//     }
-// };
+export const getUsers = async (req, res, next) => {
+    try {
+        let { role, adminId } = req.query;
+        let filter = {};
+
+        // If an admin is requesting, force the filter to their own ID and role=user
+        if (req.user.role === 'admin') {
+            filter.adminId = req.user.userId;
+            filter.role = 'user';
+        } else {
+            // Otherwise use query params (SuperAdmin can see anything)
+            if (role) filter.role = role;
+            if (adminId) filter.adminId = adminId;
+        }
+
+        const users = await User.find(filter).select("-password");
+        res.status(StatusCodes.OK).json({
+            success: true,
+            data: users,
+            count: users.length
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 export const islogin = async (req, res ,next) => {
     try {

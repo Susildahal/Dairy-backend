@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import path from "path";
 import axios from "axios";
 import { fileURLToPath } from "url";
+// import yearTransition from "./src/middleware/yearTransition.js";
+import startCronJobs from "./src/cron.js";
 
 // Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -101,3 +103,5 @@ mongodbConnection()
     .catch((error) => {
         console.error("Error starting server:", error);
     });
+
+startCronJobs();

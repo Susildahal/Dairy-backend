@@ -3,25 +3,26 @@ import {BadRequestError,NotFoundError } from "../middleware/errorHandler.js"
 import { StatusCodes } from "http-status-codes";
 
 
-
-
-
 export const saveSiteSettings = async (req, res, next) => {
   try {
     const { name, phone, email, rate_of_user, rate_of_admin } = req.body;
+    const adminId = req.user.userId; 
+    console.log(adminId)
+
     if (!name || !phone || !email || !rate_of_user || !rate_of_admin) {
       return res.status(400).json({ message: "All fields are required" });
     }
-const total = await SiteSettings.countDocuments();
-if(total >= 1) {
-throw new BadRequestError("Only one site settings document is allowed");
-}
+    const existingSettings = await SiteSettings.findOne({ adminId });
+    if (existingSettings) {
+      throw new BadRequestError("Site settings for this admin already exist");
+    }
     const data = new SiteSettings({
       name,
       phone,
       email,
       rate_of_user,
-      rate_of_admin
+      rate_of_admin,
+      adminId
     });
 
     await data.save();
@@ -39,9 +40,10 @@ throw new BadRequestError("Only one site settings document is allowed");
 
 export const getdata = async (req, res, next) => {
   try {
-    const data = await SiteSettings.findOne();
+    const adminId = req.user.userId;
+    const data = await SiteSettings.findOne({ adminId });
     if (!data) {
-      throw new NotFoundError("Site settings not found");
+      throw new NotFoundError("Site settings not found for this admin");
     }
     res.status(StatusCodes.OK).json({
       success: true,
@@ -55,9 +57,10 @@ export const getdata = async (req, res, next) => {
 export const update = async (req, res, next) => {
   try {
     const { name, phone, email, rate_of_user, rate_of_admin } = req.body;
-    const data = await SiteSettings.findOneAndUpdate({}, { name, phone, email, rate_of_user, rate_of_admin }, { new: true });
+    const adminId = req.user.userId;
+    const data = await SiteSettings.findOneAndUpdate({ adminId }, { name, phone, email, rate_of_user, rate_of_admin }, { new: true });
     if (!data) {
-      throw new NotFoundError("Site settings not found");
+      throw new NotFoundError("Site settings not found for this admin");
     }
     res.status(StatusCodes.OK).json({
       success: true,
