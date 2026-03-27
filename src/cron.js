@@ -61,7 +61,7 @@ const createDailyMilkRecords = async () => {
 
 const startCronJobs = () => {
     // Schedule the job to run every day at 12:00 AM
-  cron.schedule('18 16 * * *', () => {
+  cron.schedule('48 22 * * *', () => {
     console.log('Running cron job to create daily milk records...');
     createDailyMilkRecords();
 });

@@ -274,6 +274,8 @@ export const allmilk = async (req, resp) => {
 
         // Get paginated data
         const milkData = await Milk.find(filter)
+            .populate('userid', 'name') // Populate user's name
+            .populate('monthid', 'month year') // Populate month details
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNumber);
